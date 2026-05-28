@@ -1,134 +1,72 @@
-# TF Module Template
+# tf-azurerm-module_primitive-managed_redis
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![License: CC BY-NC-ND 4.0](https://img.shields.io/badge/License-CC_BY--NC--ND_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-nd/4.0/)
+Terraform primitive module for Azure Managed Redis using `azurerm` provider v4.
 
 ## Overview
 
-This repository contains an example Terraform module that is designed to be transformed into another module.
+This module provisions a single `azurerm_managed_redis` resource and exposes core connection and database outputs.
 
-```mermaid
-flowchart RL
-    template -->|Pulls latest changes| skeleton
-    primitives -->|Pulls latest changes| skeleton
-    template --->|Used in producing module repositories| modules
-    modules -->|Produces| primitives
+## Requirements
 
-    youarehere["<h3>You Are Here</h3>"]
-    youarehere ==> template
+- Terraform `>= 1.0`
+- Provider `hashicorp/azurerm` `>= 4.0, < 5.0`
 
-    template["<strong><a href="https://github.com/launchbynttdata/launch-terraform-template">launch-terraform-template</a></strong><br/><br/>Implements launch-terraform-skeleton, provides a starting point for expected files that make up a Launch Terraform primitive. This repository is used as a template source when other repositories are created."]
+## Features
 
-    primitives["<strong><a href="https://github.com/orgs/launchbynttdata/repositories?q=module_primitive">Terraform Primitives</a></strong><br/><br/>Launch's Terraform modules, plus their tests, one per repository. These modules regularly look for updates in launch-terraform-skeleton and autoupdate themselves where possible."]
+- Managed Redis deployment
+- Optional managed identity configuration
+- Optional customer-managed key configuration
+- Configurable default database settings
+- Standardized tagging (`provisioner`, `resource_name`)
 
-    modules["<strong><a href="https://github.com/launchbynttdata/launch-terraform-modules">launch-terraform-modules</a></strong><br/><br/>Terragrunt repository defining all of our Terraform primitive modules. Our existing modules will be imported here, our new modules will be configured here going forward."]
+## Usage
 
-    skeleton["<strong><a href="https://github.com/launchbynttdata/launch-terraform-skeleton">launch-terraform-skeleton</a></strong><br><br/>Common workflows and configurations shared by<br/>Terraform modules. Updates to this repository are<br/>consumed by the repositories that implement it<br/>on a regular schedule."]
+```hcl
+module "managed_redis" {
+  source = "terraform.registry.launch.nttdata.com/module_primitive/managed_redis/azurerm"
+
+  name                = "example-managed-redis"
+  location            = "eastus"
+  resource_group_name = "example-rg"
+
+  sku_name                  = "Balanced_B1"
+  high_availability_enabled = true
+  public_network_access     = "Disabled"
+
+  default_database = {
+    access_keys_authentication_enabled = true
+    client_protocol                    = "Encrypted"
+    clustering_policy                  = "OSSCluster"
+    eviction_policy                    = "VolatileLRU"
+  }
+
+  tags = {
+    environment = "dev"
+  }
+}
 ```
 
-## How to Use This Repo
+## Outputs
 
-This repo is intended to be used as a template for any new TF module.
+- `id`
+- `name`
+- `hostname`
+- `database_id`
+- `database_port`
+- `primary_access_key` (sensitive)
+- `secondary_access_key` (sensitive)
 
-> [!CAUTION]
-> Your changes only belong in this repo if they modify the default module, examples, tests, or documentation used for Terraform Primitive templating purposes. If you need to make changes to the shared configuration files and workflows, see the [launch-terraform-skeleton](https://github.com/launchbynttdata/launch-terraform-skeleton) repository.
->
-> If you need to create a new Terraform module, see the launch-terraform-modules](https://github.com/launchbynttdata/launch-terraform-modules) repository.
+## Example
 
-## Pre-Requisites
-
-The following commands should be available on your system:
-
-- `asdf` or `mise`
-- `make`
-- `python3` (for pre-commit)
-
-Additionally, your `git` user and email must be configured. Run the `make configure` command from the root of the repository to ensure that you meet these requirements.
-
-### Templating
-
-#### GitHub Templating
-
-This repository is used as a GitHub template by the [launch-terraform-modules](https://github.com/launchbynttdata/launch-terraform-modules) repository. If you are a Launch Engineer who needs to create a new Terraform module, you should start there.
-
-#### Manual Templating
-
-This applies to systems like Azure DevOps and CodeCommit.
-
-We need to clone the repo and start a fresh git history to get rid of the `launch-terraform-template` history. Below is a loose explanation of how to do this.
-
-``` shell
-git clone <this repo's URL> tf-<whatever it is you're building>
-cd tf-<whatever it is you're building>
-rm -rf .git
-git init -b main
-```
-
-#### Remove Educational Material
-
-We need to clear out the example code (different from the boilerplate code). We want to save the repo structure; we don't need the contents. There are `examples`, and `tests` that apply to the boilerplate that we're not going to need as developers of new modules.
-
-Note: Before you clear these things out, it's useful to actually understand what they are and why they're there. We'll be building our own as we go forward, so we need to know what it is we're removing. If this isn't your first module, it's safe to fly through this. If this is your first (or your first several, even), take the time to read the code before you remove it.
-
-```shell
-cd path/to/this/repo
-rm -rf examples/*
-rm -rf README.md
-mv TEMPLATED_README.md README.md
-```
-
-### Repo Setup
-
-#### Module Configuration
-
-- You'll need to update [`versions.tf`](./versions.tf) based on your provider needs.
-
-## Explanation of the Template
-
-### Resources and Providers
-
-In this example module we generate text resources with the `random` provider in a similar manner to our Terraform Primitive Modules, with a single resource in the root module and at least one example module instantiating that root module. In reality, the provider tends to be a cloud provider (our ecosystem has strong support for `aws` and `azure*` providers).
-
-### Module Guidelines
-
-- Each repository should have a default module in its root
-  - Should have default values and be instantiable with minimal to no inputs
-  - We can think of these default values as the "default example"
-- A `Makefile` provides tasks for terraform module development
-  - For clearing cached components, it provides a `make clean` command
-  - Linter config and other shared files are defined in the [launch-terraform-skeleton](https://github.com/launchbynttdata/launch-terraform-skeleton) repository. This template and the modules created from it will automatically check for updates of the skeleton.
-- An `examples` folder contains example uses of the default and nested modules
-  - There should be at least one example for each nested module
-  - For modules that are compatible with more than one major version of a provider, an example using the latest minor/patch release of every supported major version must be included.
-- A `tests` folder contains Go functional tests
-  - Make pre-deploy tests that validate terraform plan json where applicable
-  - Make post-deploy tests that validate the deployment where applicable
-- Provider should be configured by the consumer of this module, not the module itself
-  - Modules only define what providers/versions are required
-  - provider.tf is generated on the fly by tests/examples when needed
-
-### Go Functional Tests
-
-- Modules are how Go manages dependencies
-- To initiate a new module, run the command: `go mod init [repo_url]`
-  - It is recommended to use the absolute repository url (e.g. github.com/launchbynttdata/launch-terraform-template)
-- Relative path is highly discouraged in Go, use absolute path to import a package
-  - (e.g. `github.com/launchbynttdata/launch-terraform-template/[path_to_file]`)
-- To update paths or versions, run the command: `go get -t ./...`; Go will update the dependencies accordingly
-
-### Workflows
-
-This template includes workflows to check both an AWS and an Azure Terraform module using our launch-workflows repository's reusable workflows. The workflow will automatically select between the correct provider authentication method based on the name of the downstream repository.
-
-The `launchbynttdata` organization has the appropriate secrets and variables set for these workflows, but if you intend to use them outside of the `launchbynttdata` organization, you may need to configure secrets and variables for your use case. See the [documentation in launch-workflows](https://github.com/launchbynttdata/launch-workflows/tree/main/docs) for more details specific to your desired workflow.
+See [examples/with_cake](examples/with_cake) for a complete runnable example that includes resource name generation and resource group creation.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.0 |
-| <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.6 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0 |
+| <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) | >= 4.0, < 5.0 |
 
 ## Modules
 
@@ -138,19 +76,32 @@ No modules.
 
 | Name | Type |
 |------|------|
-| [random_string.string](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/string) | resource |
+| [azurerm_managed_redis.redis](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/managed_redis) | resource |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_length"></a> [length](#input\_length) | Length of the random string to generate. | `number` | `24` | no |
-| <a name="input_number"></a> [number](#input\_number) | Whether the random string should include numbers. Defaults to true. | `bool` | `true` | no |
-| <a name="input_special"></a> [special](#input\_special) | Whether the random string should include special characters. Defaults to false. | `bool` | `false` | no |
+| <a name="input_customer_managed_key"></a> [customer\_managed\_key](#input\_customer\_managed\_key) | Optional customer-managed key configuration for encryption. | <pre>object({<br/>    key_vault_key_id          = string<br/>    user_assigned_identity_id = string<br/>  })</pre> | `null` | no |
+| <a name="input_default_database"></a> [default\_database](#input\_default\_database) | Default database configuration for Managed Redis. | <pre>object({<br/>    access_keys_authentication_enabled            = optional(bool, false)<br/>    client_protocol                               = optional(string, "Encrypted")<br/>    clustering_policy                             = optional(string, "OSSCluster")<br/>    eviction_policy                               = optional(string, "VolatileLRU")<br/>    geo_replication_group_name                    = optional(string)<br/>    persistence_append_only_file_backup_frequency = optional(string)<br/>    persistence_redis_database_backup_frequency   = optional(string)<br/>    modules = optional(list(object({<br/>      name = string<br/>      args = optional(string)<br/>    })), [])<br/>  })</pre> | `{}` | no |
+| <a name="input_high_availability_enabled"></a> [high\_availability\_enabled](#input\_high\_availability\_enabled) | Whether high availability is enabled for Managed Redis. | `bool` | `true` | no |
+| <a name="input_identity"></a> [identity](#input\_identity) | Managed identity block. Allowed type values: SystemAssigned, UserAssigned, or SystemAssigned, UserAssigned. | <pre>object({<br/>    type         = string<br/>    identity_ids = optional(list(string))<br/>  })</pre> | `null` | no |
+| <a name="input_location"></a> [location](#input\_location) | Azure region where the Managed Redis instance is deployed. | `string` | n/a | yes |
+| <a name="input_name"></a> [name](#input\_name) | Name of the Managed Redis instance. | `string` | n/a | yes |
+| <a name="input_public_network_access"></a> [public\_network\_access](#input\_public\_network\_access) | Public network access mode. Allowed values are Enabled and Disabled. | `string` | `"Disabled"` | no |
+| <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name) | Name of the resource group containing the Managed Redis instance. | `string` | n/a | yes |
+| <a name="input_sku_name"></a> [sku\_name](#input\_sku\_name) | Managed Redis SKU name. Example values: Balanced\_B1, Balanced\_B3, ComputeOptimized\_X3, MemoryOptimized\_M10. | `string` | `"Balanced_B1"` | no |
+| <a name="input_tags"></a> [tags](#input\_tags) | Tags to apply to the Managed Redis instance. | `map(string)` | `{}` | no |
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| <a name="output_string"></a> [string](#output\_string) | The random string generated from the configured inputs. |
+| <a name="output_database_id"></a> [database\_id](#output\_database\_id) | The ID of the default Managed Redis database. |
+| <a name="output_database_port"></a> [database\_port](#output\_database\_port) | The port of the default Managed Redis database. |
+| <a name="output_hostname"></a> [hostname](#output\_hostname) | Hostname of the Managed Redis endpoint. |
+| <a name="output_id"></a> [id](#output\_id) | The ID of the Managed Redis instance. |
+| <a name="output_name"></a> [name](#output\_name) | The name of the Managed Redis instance. |
+| <a name="output_primary_access_key"></a> [primary\_access\_key](#output\_primary\_access\_key) | Primary access key for the default database when access key authentication is enabled. |
+| <a name="output_secondary_access_key"></a> [secondary\_access\_key](#output\_secondary\_access\_key) | Secondary access key for the default database when access key authentication is enabled. |
 <!-- END_TF_DOCS -->
