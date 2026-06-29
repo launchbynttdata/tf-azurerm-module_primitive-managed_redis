@@ -58,7 +58,53 @@ module "managed_redis" {
 
 ## Example
 
-See [examples/with_cake](examples/with_cake) for a complete runnable example that includes resource name generation and resource group creation.
+See [examples/azure_managed](examples/azure_managed) for a complete runnable example that includes resource name generation and resource group creation.
+
+## Module Development
+
+### Pre-Requisites
+
+The following commands should be available on your system:
+
+- `asdf` or `mise`
+- `make`
+- `python3` (for pre-commit)
+
+Additionally, your `git` user and email must be configured. Run the `make configure` command from the root of the repository to ensure that you meet these requirements.
+
+### Pre-Commit Hooks
+
+The [.pre-commit-config.yaml](.pre-commit-config.yaml) file defines certain `pre-commit` hooks that are relevant to Terraform and Golang, as well as common linting tasks. These will be configured for you when you run `make configure`.
+
+### Local Validation
+
+You should validate module changes locally before pushing a branch.
+
+1. Ensure that you have run `make configure` successfully.
+2. Ensure you are signed into the appropriate cloud provider for the module under test.
+3. Run linting:
+
+```bash
+make lint
+```
+
+4. Run integration tests (provisions infrastructure, runs tests, and tears down):
+
+```bash
+make test
+```
+
+### Review & Merge Process
+
+Open a pull request targeting `main` after local validation passes.
+
+The pull request title determines the version bump and must follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/#specification).
+
+- breaking change -> major
+- feature -> minor
+- other changes -> patch
+
+Ensure CI workflows are passing, address review feedback, and obtain required approvals from CODEOWNERS before merge.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements

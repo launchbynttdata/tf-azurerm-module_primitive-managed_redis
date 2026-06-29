@@ -33,5 +33,5 @@ func TestManagedRedisModuleReadOnly(t *testing.T) {
 		SetTestConfigFileName(infraTFVarFileNameDefault).
 		Build()
 
-	lib.RunNonDestructiveTest(t, *ctx, testimpl.TestManagedRedisReadOnly)
+	lib.RunNonDestructiveTest(t, *ctx, testimpl.TestComposableManagedRedisReadOnly)
 }
