@@ -13,11 +13,13 @@
 package test
 
 import (
+	"os"
+	"strings"
 	"testing"
 
-	"github.com/launchbynttdata/tf-azurerm-module_primitive-managed_redis/tests/testimpl"
 	"github.com/launchbynttdata/lcaf-component-terratest/lib"
 	"github.com/launchbynttdata/lcaf-component-terratest/types"
+	"github.com/launchbynttdata/tf-azurerm-module_primitive-managed_redis/tests/testimpl"
 )
 
 const (
@@ -25,7 +27,24 @@ const (
 	infraTFVarFileNameDefault        = "test.tfvars"
 )
 
+func setTerraformInitArgsForTests() {
+	const lockfileReadonlyArg = "-lockfile=readonly"
+
+	current, exists := os.LookupEnv("TF_CLI_ARGS_init")
+	if !exists {
+		_ = os.Setenv("TF_CLI_ARGS_init", lockfileReadonlyArg)
+		return
+	}
+
+	if strings.Contains(current, "-lockfile=") {
+		return
+	}
+
+	_ = os.Setenv("TF_CLI_ARGS_init", strings.TrimSpace(current+" "+lockfileReadonlyArg))
+}
+
 func TestManagedRedisModule(t *testing.T) {
+	setTerraformInitArgsForTests()
 
 	ctx := types.CreateTestContextBuilder().
 		SetTestConfig(&testimpl.ThisTFModuleConfig{}).
