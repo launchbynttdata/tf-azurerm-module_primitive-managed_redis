@@ -58,7 +58,18 @@ module "managed_redis" {
 
 ## Example
 
-See [examples/azure_managed](examples/azure_managed) for a complete runnable example that includes resource name generation and resource group creation.
+See [examples/azure_managed](examples/azure_managed) for the baseline runnable example.
+See [examples/azure_managed_default_database](examples/azure_managed_default_database) for a variant that explicitly sets non-default `default_database` values to exercise dynamic configuration paths.
+
+## Test Dependency Baseline
+
+The current `go.mod` test dependencies are intentionally pinned to align with the validated LCAF terratest baseline used by this repository:
+
+- `github.com/gruntwork-io/terratest v0.43.12`
+- `github.com/launchbynttdata/lcaf-component-terratest v1.0.3`
+- `github.com/stretchr/testify v1.9.0`
+
+These pins are deliberate for compatibility with the existing CI/runtime expectations and should be upgraded together as a coordinated change.
 
 ## Module Development
 

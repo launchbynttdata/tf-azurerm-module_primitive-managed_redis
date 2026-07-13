@@ -61,6 +61,8 @@ func checkManagedRedisID(t *testing.T, ctx types.TestContext, subscriptionID str
 	resourceGroupName := terraform.Output(t, ctx.TerratestTerraformOptions(), "resource_group_name")
 	managedRedisName := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_name")
 	expectedID := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_id")
+	expectedHostname := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_hostname")
+	expectedSKUName := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_sku_name")
 
 	managedRedis, err := client.Get(context.TODO(), resourceGroupName, managedRedisName, nil)
 	if err != nil {
@@ -71,6 +73,26 @@ func checkManagedRedisID(t *testing.T, ctx types.TestContext, subscriptionID str
 	actualIDLower := strings.ToLower(*managedRedis.ID)
 
 	assert.Equal(t, expectedIDLower, actualIDLower, "Managed Redis ID doesn't match")
+
+	if assert.NotNil(t, managedRedis.SKU, "Managed Redis SKU must be returned") && assert.NotNil(t, managedRedis.SKU.Name, "Managed Redis SKU name must be returned") {
+		assert.Equal(t, expectedSKUName, string(*managedRedis.SKU.Name), "Managed Redis SKU doesn't match")
+	}
+
+	if assert.NotNil(t, managedRedis.Properties, "Managed Redis properties must be returned") && assert.NotNil(t, managedRedis.Properties.HostName, "Managed Redis hostname must be returned") {
+		assert.Equal(t, strings.ToLower(expectedHostname), strings.ToLower(*managedRedis.Properties.HostName), "Managed Redis hostname doesn't match")
+	}
+
+	if assert.NotNil(t, managedRedis.Tags, "Managed Redis tags must be returned") {
+		provisionerTag, hasProvisionerTag := managedRedis.Tags["provisioner"]
+		if assert.True(t, hasProvisionerTag, "Managed Redis tags must include provisioner") && assert.NotNil(t, provisionerTag, "Managed Redis provisioner tag must have a value") {
+			assert.Equal(t, "terraform", strings.ToLower(*provisionerTag), "Managed Redis provisioner tag doesn't match")
+		}
+
+		resourceNameTag, hasResourceNameTag := managedRedis.Tags["resource_name"]
+		if assert.True(t, hasResourceNameTag, "Managed Redis tags must include resource_name") && assert.NotNil(t, resourceNameTag, "Managed Redis resource_name tag must have a value") {
+			assert.Equal(t, managedRedisName, *resourceNameTag, "Managed Redis resource_name tag doesn't match")
+		}
+	}
 }
 
 func checkManagedRedisListedInResourceGroup(t *testing.T, ctx types.TestContext, subscriptionID string, cred *azidentity.DefaultAzureCredential) {

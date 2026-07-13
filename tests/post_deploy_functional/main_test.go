@@ -13,8 +13,6 @@
 package test
 
 import (
-	"os"
-	"strings"
 	"testing"
 
 	"github.com/launchbynttdata/lcaf-component-terratest/lib"
@@ -27,24 +25,8 @@ const (
 	infraTFVarFileNameDefault        = "test.tfvars"
 )
 
-func setTerraformInitArgsForTests() {
-	const lockfileReadonlyArg = "-lockfile=readonly"
-
-	current, exists := os.LookupEnv("TF_CLI_ARGS_init")
-	if !exists {
-		_ = os.Setenv("TF_CLI_ARGS_init", lockfileReadonlyArg)
-		return
-	}
-
-	if strings.Contains(current, "-lockfile=") {
-		return
-	}
-
-	_ = os.Setenv("TF_CLI_ARGS_init", strings.TrimSpace(current+" "+lockfileReadonlyArg))
-}
-
 func TestManagedRedisModule(t *testing.T) {
-	setTerraformInitArgsForTests()
+	testimpl.SetTerraformInitArgsForTests()
 
 	ctx := types.CreateTestContextBuilder().
 		SetTestConfig(&testimpl.ThisTFModuleConfig{}).

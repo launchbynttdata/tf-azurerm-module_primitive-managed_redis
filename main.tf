@@ -38,19 +38,19 @@ resource "azurerm_managed_redis" "redis" {
   dynamic "default_database" {
     for_each = [var.default_database]
     content {
-      access_keys_authentication_enabled            = lookup(default_database.value, "access_keys_authentication_enabled", false)
-      client_protocol                               = lookup(default_database.value, "client_protocol", "Encrypted")
-      clustering_policy                             = lookup(default_database.value, "clustering_policy", "OSSCluster")
-      eviction_policy                               = lookup(default_database.value, "eviction_policy", "VolatileLRU")
-      geo_replication_group_name                    = lookup(default_database.value, "geo_replication_group_name", null)
-      persistence_append_only_file_backup_frequency = lookup(default_database.value, "persistence_append_only_file_backup_frequency", null)
-      persistence_redis_database_backup_frequency   = lookup(default_database.value, "persistence_redis_database_backup_frequency", null)
+      access_keys_authentication_enabled            = default_database.value.access_keys_authentication_enabled
+      client_protocol                               = default_database.value.client_protocol
+      clustering_policy                             = default_database.value.clustering_policy
+      eviction_policy                               = default_database.value.eviction_policy
+      geo_replication_group_name                    = default_database.value.geo_replication_group_name
+      persistence_append_only_file_backup_frequency = default_database.value.persistence_append_only_file_backup_frequency
+      persistence_redis_database_backup_frequency   = default_database.value.persistence_redis_database_backup_frequency
 
       dynamic "module" {
-        for_each = lookup(default_database.value, "modules", []) != null ? lookup(default_database.value, "modules", []) : []
+        for_each = default_database.value.modules
         content {
           name = module.value.name
-          args = lookup(module.value, "args", null)
+          args = module.value.args
         }
       }
     }

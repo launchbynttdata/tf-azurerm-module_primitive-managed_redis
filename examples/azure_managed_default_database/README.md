@@ -1,15 +1,11 @@
-# managed_redis example
+# managed_redis default_database example
 
-This example deploys:
-
-- A resource group using the Launch resource group primitive
-- An Azure Managed Redis instance using this primitive module
-- Launch naming conventions through the resource name module
+This example is equivalent to `examples/azure_managed`, but it explicitly sets a non-default `default_database` value to exercise dynamic block behavior in integration tests.
 
 ## Notes
 
-- Update `test.tfvars` values as needed for your target environment.
-- The example defaults to `public_network_access = "Disabled"`.
+- Uses `public_network_access = "Disabled"` by default.
+- Sets `default_database.access_keys_authentication_enabled = true`.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
