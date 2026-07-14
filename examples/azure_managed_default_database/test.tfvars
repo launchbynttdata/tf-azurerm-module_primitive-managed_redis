@@ -15,8 +15,6 @@ logical_product_family  = "launch"
 logical_product_service = "redis"
 class_env               = "gotest"
 
-high_availability_enabled = false
-
 # Explicitly set non-default default_database values so test runs exercise
 # dynamic block paths with user-provided configuration.
 default_database = {

@@ -15,11 +15,10 @@ logical_product_family  = "launch"
 logical_product_service = "redis"
 class_env               = "gotest"
 
-# Keep CI inputs minimal; only pin values that reduce Azure provisioning risk.
-high_availability_enabled = false
-
-# Remaining defaults in use:
+# Keep CI inputs minimal and rely on module/example defaults for deployability.
+# Defaults used:
 # - location                  = "eastus"
 # - sku_name                  = "Balanced_B1"
+# - high_availability_enabled = true
 # - public_network_access     = "Disabled"
 # - default_database          = {}
