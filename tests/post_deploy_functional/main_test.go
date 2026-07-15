@@ -45,83 +45,88 @@ func setTerraformInitArgsForTests() {
 	_ = os.Setenv("TF_CLI_ARGS_init", strings.TrimSpace(current+" "+lockfileReadonlyArg))
 }
 
-// ensureAMRFeatureRegistered ensures AmrAugust2025Preview feature is Registered.
-// If NotRegistered/Pending, it registers and waits briefly. If still not Registered after
-// a short wait, test is skipped (for first CI pipeline run when feature is propagating).
-func ensureAMRFeatureRegistered(t *testing.T) {
+// checkAMRFeatureRegistered verifies that AmrAugust2025Preview is in Registered state.
+//
+// In CI (LOCAL_RUN not set): any state other than Registered is a hard failure — the
+// subscription must be bootstrapped with the preview feature before running tests.
+//
+// In local runs (LOCAL_RUN=true): if the feature is NotRegistered it is registered
+// automatically, and if it is still Pending after a short wait the test is skipped
+// rather than failing, so developers are not blocked during initial subscription setup.
+func checkAMRFeatureRegistered(t *testing.T) {
+	t.Helper()
+
 	const (
 		featureNamespace = "Microsoft.Cache"
 		featureName      = "AmrAugust2025Preview"
-		maxWait          = 2 * time.Minute  // Short wait for local re-runs
+		localMaxWait     = 2 * time.Minute
 		pollInterval     = 30 * time.Second
 	)
 
-	// Helper to get current feature state
-	getFeatureState := func() (string, error) {
+	isLocalRun := os.Getenv("LOCAL_RUN") == "true"
+
+	getFeatureState := func() string {
 		cmd := exec.Command("az", "feature", "show", "--namespace", featureNamespace,
 			"--name", featureName, "--query", "properties.state", "-o", "tsv")
 		output, err := cmd.Output()
 		if err != nil {
-			return "", err
+			t.Fatalf("Could not determine state of %s/%s (is 'az' installed and authenticated?): %v",
+				featureNamespace, featureName, err)
 		}
-		return strings.TrimSpace(string(output)), nil
+		return strings.TrimSpace(string(output))
 	}
 
-	// Check current state
-	state, err := getFeatureState()
-	if err != nil {
-		t.Logf("Warning: Could not check %s feature state: %v", featureName, err)
-		return
-	}
+	state := getFeatureState()
 
-	// If already Registered, proceed
 	if state == "Registered" {
-		t.Logf("Feature %s is Registered; proceeding with test", featureName)
+		t.Logf("Feature %s/%s is Registered; proceeding", featureNamespace, featureName)
 		return
 	}
 
-	// If NotRegistered, register it
+	if !isLocalRun {
+		t.Fatalf("Feature %s/%s is %q — subscription prerequisite not met.\n"+
+			"Register the preview feature at the subscription level before running CI:\n"+
+			"  az feature register --namespace %s --name %s\n"+
+			"  az provider register -n %s\n"+
+			"Then wait for state to reach 'Registered' before re-running.",
+			featureNamespace, featureName, state,
+			featureNamespace, featureName, featureNamespace)
+	}
+
+	// LOCAL_RUN=true: attempt registration and wait briefly before skipping.
 	if state == "NotRegistered" {
-		t.Logf("Feature %s is NotRegistered; registering...", featureName)
-		cmd := exec.Command("az", "feature", "register", "--namespace", featureNamespace, "--name", featureName)
-		if _, err := cmd.CombinedOutput(); err != nil {
-			t.Logf("Warning: Feature registration attempt returned: %v", err)
+		t.Logf("LOCAL_RUN: Feature %s/%s is NotRegistered; registering...", featureNamespace, featureName)
+		regCmd := exec.Command("az", "feature", "register", "--namespace", featureNamespace, "--name", featureName)
+		if out, err := regCmd.CombinedOutput(); err != nil {
+			t.Fatalf("Failed to register feature %s/%s: %v\n%s", featureNamespace, featureName, err, out)
 		}
-		// Re-register provider to propagate
-		cmd = exec.Command("az", "provider", "register", "-n", featureNamespace)
-		if _, err := cmd.CombinedOutput(); err != nil {
-			t.Logf("Warning: Provider re-registration returned: %v", err)
+		provCmd := exec.Command("az", "provider", "register", "-n", featureNamespace)
+		if out, err := provCmd.CombinedOutput(); err != nil {
+			t.Fatalf("Failed to re-register provider %s: %v\n%s", featureNamespace, err, out)
 		}
 		time.Sleep(5 * time.Second)
 	}
 
-	// Poll briefly for Registered state (don't wait 15 min on first run)
 	startTime := time.Now()
 	for {
-		state, err := getFeatureState()
-		if err != nil {
-			t.Logf("Poll error: %v; retrying...", err)
-		} else if state == "Registered" {
-			t.Logf("Feature %s is now Registered; proceeding with test", featureName)
+		state = getFeatureState()
+		if state == "Registered" {
+			t.Logf("LOCAL_RUN: Feature %s/%s is now Registered; proceeding", featureNamespace, featureName)
 			return
-		} else {
-			t.Logf("Feature %s is %s; waiting for propagation...", featureName, state)
 		}
-
-		if time.Since(startTime) > maxWait {
-			// Skip gracefully on first run when feature is still Pending/propagating
-			t.Skipf("Feature %s is %s (still propagating after %v). Skipping provisioning test. "+
-				"This is expected on first CI pipeline run. Rerun after feature propagates.",
-				featureName, state, maxWait)
+		t.Logf("LOCAL_RUN: Feature %s/%s is %q; waiting...", featureNamespace, featureName, state)
+		if time.Since(startTime) >= localMaxWait {
+			t.Skipf("LOCAL_RUN: Feature %s/%s is still %q after %v — skipping. "+
+				"Rerun once the feature reaches Registered state.",
+				featureNamespace, featureName, state, localMaxWait)
 		}
-
 		time.Sleep(pollInterval)
 	}
 }
 
 func TestManagedRedisModule(t *testing.T) {
 	setTerraformInitArgsForTests()
-	ensureAMRFeatureRegistered(t)
+	checkAMRFeatureRegistered(t)
 
 	ctx := types.CreateTestContextBuilder().
 		SetTestConfig(&testimpl.ThisTFModuleConfig{}).

@@ -61,6 +61,25 @@ module "managed_redis" {
 See [examples/azure_managed](examples/azure_managed) for the baseline runnable example.
 See [examples/azure_managed_default_database](examples/azure_managed_default_database) for a variant that explicitly sets non-default `default_database` values to exercise dynamic configuration paths.
 
+## CI / Subscription Prerequisites
+
+Before the functional tests can run against an Azure subscription, the `AmrAugust2025Preview` preview feature must be in the **Registered** state. This is a **one-time bootstrap** step per subscription:
+
+```bash
+az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview
+az provider register -n Microsoft.Cache
+# Wait until state is 'Registered' (may take 15–60 minutes on first registration):
+az feature show --namespace Microsoft.Cache --name AmrAugust2025Preview --query properties.state -o tsv
+```
+
+The functional test (`tests/post_deploy_functional`) will **hard-fail** if the feature is not `Registered`, making the CI gate meaningful — a green run proves the module deployed and all assertions passed.
+
+For local developer convenience, set `LOCAL_RUN=true` before running tests. In that mode, if the feature is `NotRegistered` it will be registered automatically, and if it is still `Pending` after two minutes the test is skipped rather than failing hard.
+
+```bash
+LOCAL_RUN=true make go/test
+```
+
 ## Test Dependency Baseline
 
 The current `go.mod` test dependencies are intentionally pinned to align with the validated LCAF terratest baseline used by this repository:
