@@ -47,17 +47,16 @@ func setTerraformInitArgsForTests() {
 
 // checkAMRFeatureRegistered verifies that AmrAugust2025Preview reaches Registered state.
 //
-// Auto-registers the feature if NotRegistered, then waits up to 2 minutes for Registered state.
-// If still not Registered after the wait, the test is skipped (not failed) to avoid blocking
-// pipelines when initial subscription setup is in progress.
-// Once Registered, waits 60s for Azure internal propagation before allowing test to proceed.
+// Auto-registers the feature if NotRegistered, then waits (polling every 30s) until
+// the feature is Registered. Once Registered, waits 60s for Azure internal propagation
+// before allowing the test to proceed. This ensures the feature is fully ready across
+// all Azure endpoints before attempting to provision the managed_redis resource.
 func checkAMRFeatureRegistered(t *testing.T) {
 	t.Helper()
 
 	const (
 		featureNamespace = "Microsoft.Cache"
 		featureName      = "AmrAugust2025Preview"
-		maxWait          = 2 * time.Minute
 		pollInterval     = 30 * time.Second
 	)
 
@@ -88,8 +87,7 @@ func checkAMRFeatureRegistered(t *testing.T) {
 		time.Sleep(5 * time.Second)
 	}
 
-	// Wait for Registered state (up to 2 minutes)
-	startTime := time.Now()
+	// Wait indefinitely for Registered state (poll every 30s)
 	for {
 		state = getFeatureState()
 		if state == "Registered" {
@@ -98,12 +96,7 @@ func checkAMRFeatureRegistered(t *testing.T) {
 			t.Logf("Feature %s/%s propagation complete; proceeding with test", featureNamespace, featureName)
 			return
 		}
-		if time.Since(startTime) >= maxWait {
-			t.Skipf("Feature %s/%s is still %q after %v — skipping test. "+
-				"Rerun once the feature reaches Registered state.",
-				featureNamespace, featureName, state, maxWait)
-		}
-		t.Logf("Feature %s/%s is %q; waiting %v before retry...", featureNamespace, featureName, state, pollInterval)
+		t.Logf("Feature %s/%s is %q; checking again in %v...", featureNamespace, featureName, state, pollInterval)
 		time.Sleep(pollInterval)
 	}
 }

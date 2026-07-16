@@ -73,26 +73,26 @@ These pins are deliberate for compatibility with the existing CI/runtime expecta
 
 ## Azure Feature Registration Prerequisite
 
-This module requires the **`Microsoft.Cache/AmrAugust2025Preview`** preview feature. The test framework handles registration automatically:
+This module requires the **`Microsoft.Cache/AmrAugust2025Preview`** preview feature. The test framework handles registration and polling automatically:
 
 ### Test Behavior (Same for Local and CI)
 
 1. **Check feature state** → If already `Registered`, proceed
 2. **Auto-register** → If `NotRegistered`, register it automatically
-3. **Wait for propagation** → Wait up to 2 minutes for `Registered` state
-   - If reached → Wait additional 60 seconds for Azure internal propagation, then run test
-   - If timeout → **Skip test** (don't fail) to avoid blocking pipelines during initial subscription setup
-4. **Run provisioning + assertions** → Full test executes once feature is ready
+3. **Poll for propagation** → Check every 30 seconds until feature reaches `Registered` state
+   - Once `Registered` → Wait 60 seconds for Azure internal propagation
+   - Then → Run provisioning + assertions
+4. **No timeout/skip** → Test waits indefinitely for registration to complete
 
 ### Expected Test Runtime
 
 - **Feature already registered**: ~30 minutes (full provisioning + assertions)
-- **Feature auto-registered first time**: ~2–15 minutes (register + wait for propagation + skip or test)
+- **Feature auto-registering for first time**: 15–30 minutes (registration wait) + ~30 minutes (provisioning) = **45–60 minutes total**
 - **Subsequent runs**: ~30 minutes (feature already ready)
 
 ### Command to Pre-Register (Optional)
 
-To avoid initial registration wait, pre-register the feature at the subscription level:
+To avoid the initial registration wait, pre-register the feature at the subscription level:
 
 ```bash
 az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview
