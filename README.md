@@ -73,41 +73,34 @@ These pins are deliberate for compatibility with the existing CI/runtime expecta
 
 ## Azure Feature Registration Prerequisite
 
-This module requires the **`Microsoft.Cache/AmrAugust2025Preview`** preview feature to be registered at the **subscription level** before functional tests can run.
+This module requires the **`Microsoft.Cache/AmrAugust2025Preview`** preview feature. The test framework handles registration automatically:
 
-### CI/CD Runtime
+### Test Behavior (Same for Local and CI)
 
-In CI environments, the test will **hard-fail with a clear error message** if the feature is not `Registered`:
-
-```
-Feature Microsoft.Cache/AmrAugust2025Preview is <state> — subscription prerequisite not met.
-Register the preview feature at the subscription level before running CI:
-  az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview
-  az provider register -n Microsoft.Cache
-Then wait for state to reach 'Registered' before re-running.
-```
-
-Feature registration typically takes 15–30 minutes to propagate across Azure endpoints. After confirming `Registered` state, the test allows an additional 60 seconds for propagation before attempting resource deployment.
-
-### Local Test Runs
-
-For local development (set `LOCAL_RUN=true` before running tests), the test framework will:
-- **Automatically register** the feature if it is `NotRegistered`
-- **Wait up to 2 minutes** if the feature is `Pending`, then skip the test if still not ready (allowing you to retry later)
-- **Proceed normally** if the feature is already `Registered`
-
-Example local invocation:
-
-```bash
-export LOCAL_RUN=true
-make test
-```
+1. **Check feature state** → If already `Registered`, proceed
+2. **Auto-register** → If `NotRegistered`, register it automatically
+3. **Wait for propagation** → Wait up to 2 minutes for `Registered` state
+   - If reached → Wait additional 60 seconds for Azure internal propagation, then run test
+   - If timeout → **Skip test** (don't fail) to avoid blocking pipelines during initial subscription setup
+4. **Run provisioning + assertions** → Full test executes once feature is ready
 
 ### Expected Test Runtime
 
-- **Feature already `Registered`**: ~30 minutes (full provisioning + assertions)
-- **Feature needs registration (LOCAL_RUN=true)**: ~2–15 minutes (auto-register + wait + skip or proceed)
-- **Feature not ready (CI)**: Fails fast with clear error, no resource provisioning
+- **Feature already registered**: ~30 minutes (full provisioning + assertions)
+- **Feature auto-registered first time**: ~2–15 minutes (register + wait for propagation + skip or test)
+- **Subsequent runs**: ~30 minutes (feature already ready)
+
+### Command to Pre-Register (Optional)
+
+To avoid initial registration wait, pre-register the feature at the subscription level:
+
+```bash
+az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview
+az provider register -n Microsoft.Cache
+# Wait 15–30 minutes for state to reach "Registered"
+```
+
+Once the feature is `Registered` at the subscription level, all test runs will proceed directly to provisioning (~30m).
 
 ## Module Development
 
