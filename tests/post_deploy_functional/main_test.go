@@ -100,7 +100,6 @@ func checkAMRFeatureRegistered(t *testing.T) {
 		time.Sleep(pollInterval)
 	}
 }
-}
 
 func TestManagedRedisModule(t *testing.T) {
 	setTerraformInitArgsForTests()
