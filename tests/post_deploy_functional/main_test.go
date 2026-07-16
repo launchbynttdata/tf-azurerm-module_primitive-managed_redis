@@ -79,7 +79,9 @@ func checkAMRFeatureRegistered(t *testing.T) {
 	state := getFeatureState()
 
 	if state == "Registered" {
-		t.Logf("Feature %s/%s is Registered; proceeding", featureNamespace, featureName)
+		t.Logf("Feature %s/%s is Registered; waiting 60s for propagation...", featureNamespace, featureName)
+		time.Sleep(60 * time.Second)
+		t.Logf("Feature %s/%s propagation complete; proceeding", featureNamespace, featureName)
 		return
 	}
 
@@ -111,7 +113,9 @@ func checkAMRFeatureRegistered(t *testing.T) {
 	for {
 		state = getFeatureState()
 		if state == "Registered" {
-			t.Logf("LOCAL_RUN: Feature %s/%s is now Registered; proceeding", featureNamespace, featureName)
+			t.Logf("LOCAL_RUN: Feature %s/%s is now Registered; waiting 60s for propagation...", featureNamespace, featureName)
+			time.Sleep(60 * time.Second)
+			t.Logf("LOCAL_RUN: Feature %s/%s propagation complete; proceeding", featureNamespace, featureName)
 			return
 		}
 		t.Logf("LOCAL_RUN: Feature %s/%s is %q; waiting...", featureNamespace, featureName, state)

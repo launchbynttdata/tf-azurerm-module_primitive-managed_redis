@@ -61,25 +61,6 @@ module "managed_redis" {
 See [examples/azure_managed](examples/azure_managed) for the baseline runnable example.
 See [examples/azure_managed_default_database](examples/azure_managed_default_database) for a variant that explicitly sets non-default `default_database` values to exercise dynamic configuration paths.
 
-## CI / Subscription Prerequisites
-
-Before the functional tests can run against an Azure subscription, the `AmrAugust2025Preview` preview feature must be in the **Registered** state. This is a **one-time bootstrap** step per subscription:
-
-```bash
-az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview
-az provider register -n Microsoft.Cache
-# Wait until state is 'Registered' (may take 15–60 minutes on first registration):
-az feature show --namespace Microsoft.Cache --name AmrAugust2025Preview --query properties.state -o tsv
-```
-
-The functional test (`tests/post_deploy_functional`) will **hard-fail** if the feature is not `Registered`, making the CI gate meaningful — a green run proves the module deployed and all assertions passed.
-
-For local developer convenience, set `LOCAL_RUN=true` before running tests. In that mode, if the feature is `NotRegistered` it will be registered automatically, and if it is still `Pending` after two minutes the test is skipped rather than failing hard.
-
-```bash
-LOCAL_RUN=true make go/test
-```
-
 ## Test Dependency Baseline
 
 The current `go.mod` test dependencies are intentionally pinned to align with the validated LCAF terratest baseline used by this repository:
@@ -89,6 +70,44 @@ The current `go.mod` test dependencies are intentionally pinned to align with th
 - `github.com/stretchr/testify v1.9.0`
 
 These pins are deliberate for compatibility with the existing CI/runtime expectations and should be upgraded together as a coordinated change.
+
+## Azure Feature Registration Prerequisite
+
+This module requires the **`Microsoft.Cache/AmrAugust2025Preview`** preview feature to be registered at the **subscription level** before functional tests can run.
+
+### CI/CD Runtime
+
+In CI environments, the test will **hard-fail with a clear error message** if the feature is not `Registered`:
+
+```
+Feature Microsoft.Cache/AmrAugust2025Preview is <state> — subscription prerequisite not met.
+Register the preview feature at the subscription level before running CI:
+  az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview
+  az provider register -n Microsoft.Cache
+Then wait for state to reach 'Registered' before re-running.
+```
+
+Feature registration typically takes 15–30 minutes to propagate across Azure endpoints. After confirming `Registered` state, the test allows an additional 60 seconds for propagation before attempting resource deployment.
+
+### Local Test Runs
+
+For local development (set `LOCAL_RUN=true` before running tests), the test framework will:
+- **Automatically register** the feature if it is `NotRegistered`
+- **Wait up to 2 minutes** if the feature is `Pending`, then skip the test if still not ready (allowing you to retry later)
+- **Proceed normally** if the feature is already `Registered`
+
+Example local invocation:
+
+```bash
+export LOCAL_RUN=true
+make test
+```
+
+### Expected Test Runtime
+
+- **Feature already `Registered`**: ~30 minutes (full provisioning + assertions)
+- **Feature needs registration (LOCAL_RUN=true)**: ~2–15 minutes (auto-register + wait + skip or proceed)
+- **Feature not ready (CI)**: Fails fast with clear error, no resource provisioning
 
 ## Module Development
 
