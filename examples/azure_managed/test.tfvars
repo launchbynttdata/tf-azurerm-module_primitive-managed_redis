@@ -17,7 +17,7 @@ class_env               = "gotest"
 
 # Keep CI inputs minimal and rely on module/example defaults for deployability.
 # Defaults used:
-# - location                  = "eastus"
+# - location                  = "eastus2"
 # - sku_name                  = "Balanced_B1"
 # - high_availability_enabled = true
 # - public_network_access     = "Disabled"

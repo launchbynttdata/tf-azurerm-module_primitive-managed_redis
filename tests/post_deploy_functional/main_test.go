@@ -17,7 +17,6 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/launchbynttdata/lcaf-component-terratest/lib"
 	"github.com/launchbynttdata/lcaf-component-terratest/types"
@@ -45,65 +44,40 @@ func setTerraformInitArgsForTests() {
 	_ = os.Setenv("TF_CLI_ARGS_init", strings.TrimSpace(current+" "+lockfileReadonlyArg))
 }
 
-// checkAMRFeatureRegistered verifies that AmrAugust2025Preview reaches Registered state.
-//
-// Auto-registers the feature if NotRegistered, then waits (polling every 30s) until
-// the feature is Registered. Once Registered, waits 60s for Azure internal propagation
-// before allowing the test to proceed. This ensures the feature is fully ready across
-// all Azure endpoints before attempting to provision the managed_redis resource.
-func checkAMRFeatureRegistered(t *testing.T) {
+func requireAMRFeatureRegistered(t *testing.T) {
 	t.Helper()
 
-	const (
-		featureNamespace = "Microsoft.Cache"
-		featureName      = "AmrAugust2025Preview"
-		pollInterval     = 30 * time.Second
+	cmd := exec.Command(
+		"az",
+		"feature",
+		"show",
+		"--namespace", "Microsoft.Cache",
+		"--name", "AmrAugust2025Preview",
+		"--query", "properties.state",
+		"-o", "tsv",
 	)
 
-	getFeatureState := func() string {
-		cmd := exec.Command("az", "feature", "show", "--namespace", featureNamespace,
-			"--name", featureName, "--query", "properties.state", "-o", "tsv")
-		output, err := cmd.Output()
-		if err != nil {
-			t.Fatalf("Could not determine state of %s/%s (is 'az' installed and authenticated?): %v",
-				featureNamespace, featureName, err)
-		}
-		return strings.TrimSpace(string(output))
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf(
+			"Could not determine feature state for Microsoft.Cache/AmrAugust2025Preview: %v. Ensure az is installed and authenticated. Output: %s",
+			err,
+			strings.TrimSpace(string(out)),
+		)
 	}
 
-	state := getFeatureState()
-
-	// Auto-register if NotRegistered
-	if state == "NotRegistered" {
-		t.Logf("Feature %s/%s is NotRegistered; registering...", featureNamespace, featureName)
-		regCmd := exec.Command("az", "feature", "register", "--namespace", featureNamespace, "--name", featureName)
-		if out, err := regCmd.CombinedOutput(); err != nil {
-			t.Fatalf("Failed to register feature %s/%s: %v\n%s", featureNamespace, featureName, err, out)
-		}
-		provCmd := exec.Command("az", "provider", "register", "-n", featureNamespace)
-		if out, err := provCmd.CombinedOutput(); err != nil {
-			t.Fatalf("Failed to re-register provider %s: %v\n%s", featureNamespace, err, out)
-		}
-		time.Sleep(5 * time.Second)
-	}
-
-	// Wait indefinitely for Registered state (poll every 30s)
-	for {
-		state = getFeatureState()
-		if state == "Registered" {
-			t.Logf("Feature %s/%s is Registered; waiting 60s for propagation...", featureNamespace, featureName)
-			time.Sleep(60 * time.Second)
-			t.Logf("Feature %s/%s propagation complete; proceeding with test", featureNamespace, featureName)
-			return
-		}
-		t.Logf("Feature %s/%s is %q; checking again in %v...", featureNamespace, featureName, state, pollInterval)
-		time.Sleep(pollInterval)
+	state := strings.TrimSpace(string(out))
+	if state != "Registered" {
+		t.Fatalf(
+			"Prerequisite not met: Microsoft.Cache/AmrAugust2025Preview must be Registered before running functional tests (current state: %q). Run: az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview && az provider register -n Microsoft.Cache",
+			state,
+		)
 	}
 }
 
 func TestManagedRedisModule(t *testing.T) {
 	setTerraformInitArgsForTests()
-	checkAMRFeatureRegistered(t)
+	requireAMRFeatureRegistered(t)
 
 	ctx := types.CreateTestContextBuilder().
 		SetTestConfig(&testimpl.ThisTFModuleConfig{}).
@@ -111,5 +85,5 @@ func TestManagedRedisModule(t *testing.T) {
 		SetTestConfigFileName(infraTFVarFileNameDefault).
 		Build()
 
-	lib.RunSetupTestTeardown(t, *ctx, testimpl.TestManagedRedis)
+	lib.RunSetupTestTeardown(t, *ctx, testimpl.TestComposableManagedRedis)
 }

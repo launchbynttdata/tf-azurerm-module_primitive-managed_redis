@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestManagedRedis verifies managed redis is deployed and listed in Azure.
+// TestComposableManagedRedis verifies managed redis is deployed and listed in Azure.
 // Functional test runs both ID verification and list verification.
-func TestManagedRedis(t *testing.T, ctx types.TestContext) {
+func TestComposableManagedRedis(t *testing.T, ctx types.TestContext) {
 	subscriptionID := os.Getenv("ARM_SUBSCRIPTION_ID")
 	if len(subscriptionID) == 0 {
 		t.Fatal("ARM_SUBSCRIPTION_ID environment variable is not set")

@@ -73,34 +73,28 @@ These pins are deliberate for compatibility with the existing CI/runtime expecta
 
 ## Azure Feature Registration Prerequisite
 
-This module requires the **`Microsoft.Cache/AmrAugust2025Preview`** preview feature. The test framework handles registration and polling automatically:
+This module requires the **`Microsoft.Cache/AmrAugust2025Preview`** preview feature.
 
-### Test Behavior (Same for Local and CI)
+The feature must be registered at the **subscription/CI environment level** before running functional tests. The tests do not auto-register or skip.
 
-1. **Check feature state** → If already `Registered`, proceed
-2. **Auto-register** → If `NotRegistered`, register it automatically
-3. **Poll for propagation** → Check every 30 seconds until feature reaches `Registered` state
-   - Once `Registered` → Wait 60 seconds for Azure internal propagation
-   - Then → Run provisioning + assertions
-4. **No timeout/skip** → Test waits indefinitely for registration to complete
+During `make test`, environment setup performs a fail-fast prerequisite check and exits with a clear error if the feature is not `Registered`.
 
 ### Expected Test Runtime
 
 - **Feature already registered**: ~30 minutes (full provisioning + assertions)
-- **Feature auto-registering for first time**: 15–30 minutes (registration wait) + ~30 minutes (provisioning) = **45–60 minutes total**
-- **Subsequent runs**: ~30 minutes (feature already ready)
+- **Feature not registered**: test exits early with prerequisite error (no provisioning)
 
-### Command to Pre-Register (Optional)
+### Command to Pre-Register (Required before functional CI)
 
-To avoid the initial registration wait, pre-register the feature at the subscription level:
+Pre-register the feature once for the test subscription:
 
 ```bash
 az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview
 az provider register -n Microsoft.Cache
-# Wait 15–30 minutes for state to reach "Registered"
+# Wait until state reaches "Registered"
 ```
 
-Once the feature is `Registered` at the subscription level, all test runs will proceed directly to provisioning (~30m).
+Once the feature is `Registered` at the subscription level, functional test runs proceed with real provisioning and assertions (~30m).
 
 ## Module Development
 
