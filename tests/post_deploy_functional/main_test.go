@@ -13,9 +13,6 @@
 package test
 
 import (
-	"os"
-	"os/exec"
-	"strings"
 	"testing"
 
 	"github.com/launchbynttdata/lcaf-component-terratest/lib"
@@ -28,57 +25,7 @@ const (
 	infraTFVarFileNameDefault        = "test.tfvars"
 )
 
-func setTerraformInitArgsForTests() {
-	const lockfileReadonlyArg = "-lockfile=readonly"
-
-	current, exists := os.LookupEnv("TF_CLI_ARGS_init")
-	if !exists {
-		_ = os.Setenv("TF_CLI_ARGS_init", lockfileReadonlyArg)
-		return
-	}
-
-	if strings.Contains(current, "-lockfile=") {
-		return
-	}
-
-	_ = os.Setenv("TF_CLI_ARGS_init", strings.TrimSpace(current+" "+lockfileReadonlyArg))
-}
-
-func requireAMRFeatureRegistered(t *testing.T) {
-	t.Helper()
-
-	cmd := exec.Command(
-		"az",
-		"feature",
-		"show",
-		"--namespace", "Microsoft.Cache",
-		"--name", "AmrAugust2025Preview",
-		"--query", "properties.state",
-		"-o", "tsv",
-	)
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf(
-			"Could not determine feature state for Microsoft.Cache/AmrAugust2025Preview: %v. Ensure az is installed and authenticated. Output: %s",
-			err,
-			strings.TrimSpace(string(out)),
-		)
-	}
-
-	state := strings.TrimSpace(string(out))
-	if state != "Registered" {
-		t.Fatalf(
-			"Prerequisite not met: Microsoft.Cache/AmrAugust2025Preview must be Registered before running functional tests (current state: %q). Run: az feature register --namespace Microsoft.Cache --name AmrAugust2025Preview && az provider register -n Microsoft.Cache",
-			state,
-		)
-	}
-}
-
 func TestManagedRedisModule(t *testing.T) {
-	setTerraformInitArgsForTests()
-	requireAMRFeatureRegistered(t)
-
 	ctx := types.CreateTestContextBuilder().
 		SetTestConfig(&testimpl.ThisTFModuleConfig{}).
 		SetTestConfigFolderName(testConfigsExamplesFolderDefault).

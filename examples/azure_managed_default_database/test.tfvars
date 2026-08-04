@@ -14,7 +14,6 @@ instance_resource       = 1
 logical_product_family  = "launch"
 logical_product_service = "redis"
 class_env               = "gotest"
-location                = "eastus2"
 
 sku_name                  = "Balanced_B1"
 high_availability_enabled = false
