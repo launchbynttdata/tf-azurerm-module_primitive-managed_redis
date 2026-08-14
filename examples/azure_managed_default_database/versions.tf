@@ -10,7 +10,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-output "string" {
-  description = "The random string to be generated (with cake)."
-  value       = format("%s🍰%s", module.cake_prefix.string, module.cake_suffix.string)
+terraform {
+  required_version = ">= 1.0"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 4.0, < 5.0"
+    }
+  }
 }

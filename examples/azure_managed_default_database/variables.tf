@@ -10,67 +10,90 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-variable "name" {
-  description = "Name of the Managed Redis instance."
+variable "resource_names_map" {
+  description = "Map used by the Launch resource naming module."
+  type = map(object({
+    name       = string
+    max_length = optional(number, 60)
+  }))
+
+  default = {
+    resource_group = {
+      name       = "rg"
+      max_length = 80
+    }
+    managed_redis = {
+      name       = "redis"
+      max_length = 60
+    }
+  }
+}
+
+variable "instance_env" {
+  description = "Environment instance number used for name generation."
+  type        = number
+  default     = 0
+}
+
+variable "instance_resource" {
+  description = "Resource instance number used for name generation."
+  type        = number
+  default     = 0
+}
+
+variable "logical_product_family" {
+  description = "Logical product family used for name generation."
   type        = string
+  default     = "launch"
+}
+
+variable "logical_product_service" {
+  description = "Logical product service used for name generation."
+  type        = string
+  default     = "redis"
+}
+
+variable "class_env" {
+  description = "Deployment environment used for name generation."
+  type        = string
+  default     = "dev"
 }
 
 variable "location" {
-  description = "Azure region where the Managed Redis instance is deployed."
+  description = "Azure region for the example deployment."
   type        = string
-}
-
-variable "resource_group_name" {
-  description = "Name of the resource group containing the Managed Redis instance."
-  type        = string
+  default     = "eastus"
 }
 
 variable "sku_name" {
-  description = "Managed Redis SKU name. Example values: Balanced_B1, Balanced_B3, ComputeOptimized_X3, MemoryOptimized_M10."
+  description = "Managed Redis SKU name."
   type        = string
   default     = "Balanced_B1"
 }
 
 variable "high_availability_enabled" {
-  description = "Whether high availability is enabled for Managed Redis."
+  description = "Whether high availability is enabled for the managed redis instance."
   type        = bool
   default     = true
 }
 
 variable "public_network_access" {
-  description = "Public network access mode. Allowed values are Enabled and Disabled."
+  description = "Public network access mode for Managed Redis."
   type        = string
   default     = "Disabled"
-
-  validation {
-    condition     = contains(["Enabled", "Disabled"], var.public_network_access)
-    error_message = "public_network_access must be either Enabled or Disabled."
-  }
 }
 
 variable "identity" {
-  description = "Managed identity block. Allowed type values: SystemAssigned, UserAssigned, or SystemAssigned, UserAssigned."
+  description = "Optional managed identity settings."
   type = object({
     type         = string
     identity_ids = optional(list(string))
   })
   default = null
-
-  validation {
-    condition = try(
-      var.identity == null || contains([
-        "SystemAssigned",
-        "UserAssigned",
-        "SystemAssigned, UserAssigned"
-      ], var.identity.type),
-      true
-    )
-    error_message = "identity.type must be SystemAssigned, UserAssigned, or SystemAssigned, UserAssigned."
-  }
 }
 
 variable "customer_managed_key" {
-  description = "Optional customer-managed key configuration for encryption."
+  description = "Optional CMK encryption settings."
   type = object({
     key_vault_key_id          = string
     user_assigned_identity_id = string
@@ -79,7 +102,7 @@ variable "customer_managed_key" {
 }
 
 variable "default_database" {
-  description = "Default database configuration for Managed Redis."
+  description = "Default database configuration for managed redis."
   type = object({
     access_keys_authentication_enabled            = optional(bool, false)
     client_protocol                               = optional(string, "Encrypted")
@@ -97,7 +120,7 @@ variable "default_database" {
 }
 
 variable "tags" {
-  description = "Tags to apply to the Managed Redis instance."
+  description = "Tags to apply to resources in the example."
   type        = map(string)
   default     = {}
 }

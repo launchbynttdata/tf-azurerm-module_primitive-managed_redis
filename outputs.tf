@@ -10,7 +10,39 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-output "string" {
-  description = "The random string generated from the configured inputs."
-  value       = random_string.string.result
+output "id" {
+  description = "The ID of the Managed Redis instance."
+  value       = azurerm_managed_redis.redis.id
+}
+
+output "name" {
+  description = "The name of the Managed Redis instance."
+  value       = azurerm_managed_redis.redis.name
+}
+
+output "hostname" {
+  description = "Hostname of the Managed Redis endpoint."
+  value       = azurerm_managed_redis.redis.hostname
+}
+
+output "database_id" {
+  description = "The ID of the default Managed Redis database."
+  value       = azurerm_managed_redis.redis.default_database[0].id
+}
+
+output "database_port" {
+  description = "The port of the default Managed Redis database."
+  value       = azurerm_managed_redis.redis.default_database[0].port
+}
+
+output "primary_access_key" {
+  description = "Primary access key for the default database when access key authentication is enabled."
+  value       = azurerm_managed_redis.redis.default_database[0].primary_access_key
+  sensitive   = true
+}
+
+output "secondary_access_key" {
+  description = "Secondary access key for the default database when access key authentication is enabled."
+  value       = azurerm_managed_redis.redis.default_database[0].secondary_access_key
+  sensitive   = true
 }
