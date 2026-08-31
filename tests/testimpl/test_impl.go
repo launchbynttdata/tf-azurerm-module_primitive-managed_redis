@@ -58,11 +58,11 @@ func TestComposableManagedRedisReadOnly(t *testing.T, ctx types.TestContext) {
 func checkManagedRedisID(t *testing.T, ctx types.TestContext, subscriptionID string, cred *azidentity.DefaultAzureCredential) {
 	client := NewManagedRedisClient(t, subscriptionID, cred)
 
-	resourceGroupName := terraform.Output(t, ctx.TerratestTerraformOptions(), "resource_group_name")
-	managedRedisName := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_name")
-	expectedID := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_id")
-	expectedHostname := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_hostname")
-	expectedSKUName := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_sku_name")
+	resourceGroupName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "resource_group_name")
+	managedRedisName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "managed_redis_name")
+	expectedID := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "managed_redis_id")
+	expectedHostname := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "managed_redis_hostname")
+	expectedSKUName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "managed_redis_sku_name")
 
 	managedRedis, err := client.Get(context.TODO(), resourceGroupName, managedRedisName, nil)
 	if err != nil {
@@ -98,8 +98,8 @@ func checkManagedRedisID(t *testing.T, ctx types.TestContext, subscriptionID str
 func checkManagedRedisListedInResourceGroup(t *testing.T, ctx types.TestContext, subscriptionID string, cred *azidentity.DefaultAzureCredential) {
 	client := NewManagedRedisClient(t, subscriptionID, cred)
 
-	resourceGroupName := terraform.Output(t, ctx.TerratestTerraformOptions(), "resource_group_name")
-	managedRedisName := terraform.Output(t, ctx.TerratestTerraformOptions(), "managed_redis_name")
+	resourceGroupName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "resource_group_name")
+	managedRedisName := terraform.OutputContext(t, context.Background(), ctx.TerratestTerraformOptions(), "managed_redis_name")
 
 	pager := client.NewListByResourceGroupPager(resourceGroupName, nil)
 	foundManagedRedis := false
